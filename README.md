@@ -15,16 +15,12 @@
 ### 使用方法
 
 #### 前期准备
-服务端
+在客户端和服务端机器分别执行下面两个命令，这两条命令设置防火墙策略，丢弃系统发送RST报文。
 ```shell
-sudo iptables-legacy -A INPUT -p tcp --dport <target port> -j DROP
+sudo iptables-legacy -I OUTPUT -p tcp --tcp-flags ALL RST,ACK -j DROP
+sudo iptables-legacy -I OUTPUT -p tcp --tcp-flags ALL RST -j DROP
 ```
 
-客户端
-```shell
-sudo iptables-legacy -A INPUT -p tcp --dport 10000:60000 -j DROP
-```
-
-为什么要加防火墙规则，系统防火墙默认检测到没有开放的端口，会自动发送一个RST的报文，这个报文会时连接中断。
-所以添加防火墙规则，可以阻止系统发送RST报文。
-
+### TODO
+心跳问题
+    客户端需要在一定时间内保持连接不断开，需要有心跳机制
