@@ -2,14 +2,14 @@ package client
 
 import (
 	"fmt"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"net"
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"time"
 )
 
 func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports string, c_src_exclude_hosts string, dport int, count int) error {
@@ -60,7 +60,7 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 		}
 		for i := ps; i < port_end; i++ {
 			// fmt.Println(sip, i)
-			fmt.Println(s_mac, d_mac, sip, dip, layers.TCPPort(uint16(i)), layers.TCPPort(uint16(dport)))
+			//fmt.Println(s_mac, d_mac, sip, dip, layers.TCPPort(uint16(i)), layers.TCPPort(uint16(dport)))
 			buf := BuildOnlySYNPacket(s_mac, d_mac, sip, dip, layers.TCPPort(uint16(i)), layers.TCPPort(uint16(dport)))
 			handle.WritePacketData(buf.Bytes())
 			if err != nil {
@@ -68,6 +68,7 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 			}
 			// fmt.Println("send done.")
 			record = record + 1
+			time.Sleep(time.Microsecond * 100)
 			if record >= count {
 				next = false
 			}

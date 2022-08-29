@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"net"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -33,21 +34,18 @@ func HanderPacket(deviceName string, port int) {
 			tcp, _ := tcpLayer.(*layers.TCP)
 			//fmt.Println("SYN: ",tcp.SYN,tcp.ACK,tcp.PSH,tcp.FIN)
 			var linklayer []byte = packet.LinkLayer().LayerContents()
-			var dmac []byte = linklayer[0:6]
-			var smac []byte = linklayer[6:12]
-			//fmt.Println(smac,dmac)
+			var d_mac net.HardwareAddr = linklayer[0:6]
+			var s_mac net.HardwareAddr = linklayer[6:12]
 			var iplayer []byte = packet.NetworkLayer().LayerContents()
-			var sip []byte = iplayer[12:16]
-			var dip []byte = iplayer[16:20]
-			//fmt.Println(sip,dip)
-			var sport = tcp.Contents[0:2]
-			var dport = tcp.Contents[2:4]
-			var synSeq = tcp.Contents[4:8]
-			var synAck = tcp.Contents[8:12]
-			//fmt.Println(sport,dport)
+			var s_ip net.IP = iplayer[12:16]
+			var d_ip net.IP = iplayer[16:20]
+			var s_port layers.TCPPort = layers.TCPPort(binary.BigEndian.Uint16(tcp.Contents[0:2]))
+			var d_port layers.TCPPort = layers.TCPPort(binary.BigEndian.Uint16(tcp.Contents[2:4]))
+			var seq = binary.BigEndian.Uint32(tcp.Contents[4:8])
+			var ack = binary.BigEndian.Uint32(tcp.Contents[8:12])
 			if tcp.SYN && tcp.ACK {
 				// fmt.Println("SYN+ACK 第二次挥手", dip,sip)
-				buf := BuildSynAckAckPacket(smac, dmac, sip, dip, dport, sport, synSeq, synAck)
+				buf := BuildSynAckAckPacket(d_mac, s_mac, d_ip, s_ip, s_port, d_port, ack, seq+1)
 				err = handle.WritePacketData(buf.Bytes())
 				if err != nil {
 					fmt.Println("send packet error")
@@ -59,24 +57,24 @@ func HanderPacket(deviceName string, port int) {
 }
 
 //构建第三次握手包
-func BuildSynAckAckPacket(sMac []byte, dMac []byte, sIP []byte, dIP []byte, dPort []byte, sPort []byte, synSeq []byte, synAck []byte) gopacket.SerializeBuffer {
+func BuildSynAckAckPacket(sMac net.HardwareAddr, dMac net.HardwareAddr, sIP net.IP, dIP net.IP, dPort layers.TCPPort, sPort layers.TCPPort, synSeq uint32, synAck uint32) gopacket.SerializeBuffer {
 	eth := layers.Ethernet{
-		SrcMAC:       dMac,
-		DstMAC:       sMac,
+		SrcMAC:       sMac,
+		DstMAC:       dMac,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 	ipLayer := layers.IPv4{
-		SrcIP:    dIP,
-		DstIP:    sIP,
+		SrcIP:    sIP,
+		DstIP:    dIP,
 		Version:  4,
 		TTL:      64,
 		Protocol: layers.IPProtocolTCP,
 	}
 	tcpLayer := layers.TCP{
-		SrcPort: layers.TCPPort(binary.BigEndian.Uint16(dPort)),
-		DstPort: layers.TCPPort(binary.BigEndian.Uint16(sPort)),
-		Seq:     binary.BigEndian.Uint32(synAck),
-		Ack:     binary.BigEndian.Uint32(synSeq) + 1,
+		SrcPort: sPort,
+		DstPort: dPort,
+		Seq:     synSeq,
+		Ack:     synAck,
 		Window:  502,
 		ACK:     true,
 	}
