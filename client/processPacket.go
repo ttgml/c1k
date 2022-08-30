@@ -2,17 +2,19 @@ package client
 
 import (
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
 
-func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports string, c_src_exclude_hosts string, dport int, count int) error {
+func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports string, c_src_exclude_hosts string, dport int, count int, wg *sync.WaitGroup) error {
 	if strings.Contains(c_src_hosts, "/") {
 		//输入的源host包含掩码，是一个网段
 		// src_ip, src_ipnet, err:=net.ParseCIDR(c_src_hosts)
@@ -32,6 +34,10 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 	dip := net.ParseIP(c_host)
 	// fmt.Println("d_ip: ", dip)
 	d_mac, err := GetDestHardwareAddr(dip, c_interface)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	// fmt.Println("d_mac: ", d_mac)
 
 	var record int = 0
@@ -77,7 +83,8 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 			}
 		}
 	}
-
+	fmt.Println("Task Done.")
+	wg.Done()
 	return nil
 }
 

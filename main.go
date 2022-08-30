@@ -4,11 +4,14 @@ import (
 	"c1k/client"
 	"c1k/server"
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"log"
 	"os"
-	"time"
+	"sync"
+
+	"github.com/urfave/cli/v2"
 )
+
+var wg sync.WaitGroup
 
 func main() {
 	var s_interface string
@@ -22,37 +25,37 @@ func main() {
 	var c_src_hosts string
 	var c_src_exclude_hosts string
 	app := &cli.App{
-		Usage: "Create more connection de tool",
+		Usage: "Create more connection de tool, just test",
 		Commands: []*cli.Command{
 			{
 				Name:  "server",
 				Usage: "Just listen host and port",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "interface",
-						Value:       "eth0",
-						DefaultText: "eth0",
-						Required:    false,
+						Name: "interface",
+						// Value:       "eth0",
+						// DefaultText: "eth0",
+						Required:    true,
 						Aliases:     []string{"i"},
-						Usage:       "set network interface",
+						Usage:       "set network interface name",
 						Destination: &s_interface,
 					},
 					&cli.StringFlag{
-						Name:        "host",
-						Value:       "0.0.0.0",
-						DefaultText: "0.0.0.0",
-						Required:    false,
+						Name: "host",
+						// Value:       "0.0.0.0",
+						// DefaultText: "0.0.0.0",
+						Required:    true,
 						Aliases:     []string{"x"},
-						Usage:       "set network host/ip",
+						Usage:       "set interface ip",
 						Destination: &s_host,
 					},
 					&cli.StringFlag{
 						Name:        "port",
 						Value:       "23456",
 						DefaultText: "23456",
-						Required:    false,
+						Required:    true,
 						Aliases:     []string{"p"},
-						Usage:       "set network port",
+						Usage:       "server port, use [,] split",
 						Destination: &s_port,
 					},
 				},
@@ -70,7 +73,7 @@ func main() {
 						Name:        "port",
 						Value:       23456,
 						DefaultText: "23456",
-						Required:    false,
+						Required:    true,
 						Aliases:     []string{"p"},
 						Usage:       "set target port",
 						Destination: &c_port,
@@ -79,7 +82,7 @@ func main() {
 						Name:        "interface",
 						Value:       "eth0",
 						DefaultText: "eth0",
-						Required:    false,
+						Required:    true,
 						Aliases:     []string{"i"},
 						Usage:       "set src network interface",
 						Destination: &c_interface,
@@ -88,7 +91,7 @@ func main() {
 						Name:        "host",
 						Value:       "192.168.56.105",
 						DefaultText: "192.168.56.105",
-						Required:    false,
+						Required:    true,
 						Aliases:     []string{"x"},
 						Usage:       "set target host",
 						Destination: &c_host,
@@ -104,11 +107,11 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:        "srcport",
-						Value:       "1024-61024",
-						DefaultText: "1024-61024",
+						Value:       "2000-62000",
+						DefaultText: "2000-62000",
 						Required:    false,
 						Aliases:     []string{"b"},
-						Usage:       "set src port range",
+						Usage:       "src port range",
 						Destination: &c_src_port_range,
 					},
 					&cli.IntFlag{
@@ -117,13 +120,13 @@ func main() {
 						DefaultText: "1",
 						Required:    false,
 						Aliases:     []string{"c"},
-						Usage:       "set connect count number",
+						Usage:       "connect count number",
 						Destination: &c_count,
 					},
 					&cli.StringFlag{
 						Name:        "exclude",
 						Value:       "255.255.255.254/32",
-						DefaultText: "1",
+						DefaultText: "255.255.255.254/32",
 						Required:    false,
 						Aliases:     []string{"e"},
 						Usage:       "Exclude some network addresses",
@@ -132,14 +135,17 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 					fmt.Println("create client: ", c_interface, c_count, c_src_hosts, c_src_port_range, c_host, c_port)
-					//buildFirstSYNPacket(192.168.56.1,)
-					go client.HanderPacket(c_interface, c_port)
-					time.Sleep(time.Second * 2)
-					client.ProcessTask(c_src_hosts, c_interface, c_host, c_src_port_range, c_src_exclude_hosts, c_port, c_count)
-					//for {
-					//	//client.BuildOnlySYNPacket()
-					//}
-					time.Sleep(100 * time.Second)
+					wg.Add(1)
+					//抓包
+					go client.HanderPacket(c_interface, c_port, &wg)
+					wg.Wait()
+
+					//发包
+					wg.Add(1)
+					go client.ProcessTask(c_src_hosts, c_interface, c_host, c_src_port_range, c_src_exclude_hosts, c_port, c_count, &wg)
+					// time.Sleep(100 * time.Second)
+
+					wg.Wait()
 					return nil
 				},
 			},

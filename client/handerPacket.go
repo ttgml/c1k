@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -12,7 +13,7 @@ import (
 )
 
 //这个方法主要用来抓取服务端返回的数据包，并且返回第三次握手包
-func HanderPacket(deviceName string, port int) {
+func HanderPacket(deviceName string, port int, wg *sync.WaitGroup) {
 	handle, err := pcap.OpenLive(deviceName, 1600, true, pcap.BlockForever)
 
 	if err != nil {
@@ -21,6 +22,8 @@ func HanderPacket(deviceName string, port int) {
 
 	handle.SetBPFFilter("src port " + string(port))
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	//等准备好抓包之后，通知默认goroutine继续执行后面的代码
+	wg.Done()
 
 	for {
 		packet, err := packetSource.NextPacket()

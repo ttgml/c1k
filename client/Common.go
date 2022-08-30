@@ -2,11 +2,11 @@ package client
 
 import (
 	"encoding/binary"
-	"fmt"
-	"github.com/mdlayher/arp"
 	"net"
 	"net/netip"
 	"time"
+
+	"github.com/mdlayher/arp"
 )
 
 func GetInterfaceHardwareAddr(deviceName string) (net.HardwareAddr, error) {
@@ -24,7 +24,6 @@ func GetDestHardwareAddr(netdip net.IP, deviceName string) (net.HardwareAddr, er
 	for true {
 		packet, _, err := arp_client.Read()
 		if err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		if packet.SenderIP == dip {
