@@ -3,12 +3,13 @@ package server
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
 	"io"
 	"net"
 	"strings"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
 
 //这个方法主要用来抓取数据包，以及模拟建立连接和端开连接(SYN+FIN)
@@ -52,6 +53,8 @@ func HanderPacket(deviceName string, host string, port string) {
 			var seq = binary.BigEndian.Uint32(tcp.Contents[4:8])
 			var ack = binary.BigEndian.Uint32(tcp.Contents[8:12])
 			//var content_len uint32 = uint32(len(tcp.LayerContents()))
+			var payload_len uint32 = uint32(len(tcp.Payload))
+
 			if tcp.SYN && !tcp.ACK {
 				// fmt.Println("收到客户端发过来的SYN包")
 				var buf gopacket.SerializeBuffer = BuildSynAckPacket(d_mac, s_mac, d_ip, s_ip, d_port, s_port, seq*2-1, seq+1)
@@ -62,9 +65,10 @@ func HanderPacket(deviceName string, host string, port string) {
 				// fmt.Println("send done.")
 			}
 			//判断是不是心跳检测，如果是的话返回假的心跳
+			//这里的seq有问题，seq应该为ACK+LEN的长度,这里为1是因为在发送空白信息的情况下, 占1byte, 当客户端发送的报文内容不为1时，会报错
 			if !tcp.SYN && !tcp.FIN && tcp.PSH && tcp.ACK {
 				// fmt.Println("发现用于心跳检测(PSH数据)的报文，需要返回确认信息: PSH & ACK",sip,sport,dip,dport)
-				var buf gopacket.SerializeBuffer = BuildAckAckPacket(d_mac, s_mac, d_ip, s_ip, d_port, s_port, ack, seq+1)
+				var buf gopacket.SerializeBuffer = BuildAckAckPacket(d_mac, s_mac, d_ip, s_ip, d_port, s_port, ack, seq+payload_len)
 				err = handle.WritePacketData(buf.Bytes())
 				if err != nil {
 					fmt.Println("send packet error")
