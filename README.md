@@ -43,6 +43,20 @@ sudo ./c1k server -i <interface> -x <ip> -p <port>
 sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range> -c <count>
 ```
 
+### 参数说明
+#### server
+ -  ` --host / -x ` 指定后端服务的IP
+ -  ` --interface / -i ` 指定抓包网卡名字
+ -  ` --port / -p ` 指定服务端口，可以同时指定多个端口(用英文逗号分割)。
+#### client
+ - ` --host / -x ` 指定服务IP（通常为负载均衡的IP)
+ - ` --port / -p ` 指定服务器端口 (通常为负载均衡的端口)
+ - ` --interface / -i ` 指定发包网卡名字
+ - ` --count / -c ` 指定连接数
+ - ` --rate / -r ` 指定新建连接速率，单位为 次数/秒
+ - ` --srcport / -b ` 指定源端口范围，如2000-62000>
+ - ` --src / -s ` 指定源IP，可以为地址范围，如 192.168.56.1/24 
+ - ` --exclude / -e ` 排除某些源地址
 
 ### TODO
 心跳问题
@@ -56,6 +70,8 @@ sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range>
  - 需要记录失败的端口
 
 控制速率
+
+ - 指定每秒新建连接数
 
 控制带宽
 

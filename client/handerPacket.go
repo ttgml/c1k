@@ -13,7 +13,7 @@ import (
 )
 
 //这个方法主要用来抓取服务端返回的数据包，并且返回第三次握手包
-func HanderPacket(deviceName string, port int, wg *sync.WaitGroup) {
+func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel chan int, rst_channel chan int, re_channel chan int) {
 	handle, err := pcap.OpenLive(deviceName, 1600, true, pcap.BlockForever)
 
 	if err != nil {
@@ -46,6 +46,7 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup) {
 			var d_port layers.TCPPort = layers.TCPPort(binary.BigEndian.Uint16(tcp.Contents[2:4]))
 			var seq = binary.BigEndian.Uint32(tcp.Contents[4:8])
 			var ack = binary.BigEndian.Uint32(tcp.Contents[8:12])
+			re_channel<-1
 			if tcp.SYN && tcp.ACK {
 				// fmt.Println("SYN+ACK 第二次挥手", dip,sip)
 				buf := BuildSynAckAckPacket(d_mac, s_mac, d_ip, s_ip, s_port, d_port, ack, seq+1)
@@ -53,11 +54,21 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup) {
 				if err != nil {
 					fmt.Println("send packet error")
 				}
-				// fmt.Println("send done.")
+				est_channel<-1
+			}
+			if tcp.RST && !tcp.ACK {
+				rst_channel<-1
+			}
+			if tcp.RST && tcp.ACK {
+				//这属于 服务器拒绝了 连接（因为服务端没有监听对应的端口，所以返回了RST+ACK
+				rst_channel<-1
 			}
 		}
 	}
 }
+
+
+
 
 //构建第三次握手包
 func BuildSynAckAckPacket(sMac net.HardwareAddr, dMac net.HardwareAddr, sIP net.IP, dIP net.IP, dPort layers.TCPPort, sPort layers.TCPPort, synSeq uint32, synAck uint32) gopacket.SerializeBuffer {

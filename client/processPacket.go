@@ -2,19 +2,17 @@ package client
 
 import (
 	"fmt"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
 )
 
-func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports string, c_src_exclude_hosts string, dport int, count int, wg *sync.WaitGroup) error {
+func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports string, c_src_exclude_hosts string, dport int, count int, wg *sync.WaitGroup, sd chan int) error {
 	if strings.Contains(c_src_hosts, "/") {
 		//输入的源host包含掩码，是一个网段
 		// src_ip, src_ipnet, err:=net.ParseCIDR(c_src_hosts)
@@ -73,6 +71,7 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 				fmt.Println("send packet error")
 			}
 			// fmt.Println("send done.")
+			sd <- 1
 			record = record + 1
 			time.Sleep(time.Microsecond * 100)
 			if record >= count {
@@ -83,44 +82,9 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 			}
 		}
 	}
-	fmt.Println("Task Done.")
+	//fmt.Println("Task Done.")
 	wg.Done()
 	return nil
 }
 
-func BuildOnlySYNPacket(smac net.HardwareAddr, dmac net.HardwareAddr, sip net.IP, dip net.IP, sport layers.TCPPort, dport layers.TCPPort) gopacket.SerializeBuffer {
-	eth := layers.Ethernet{
-		SrcMAC:       smac,
-		DstMAC:       dmac,
-		EthernetType: layers.EthernetTypeIPv4,
-	}
-	ipLayer := layers.IPv4{
-		SrcIP:    sip,
-		DstIP:    dip,
-		Version:  4,
-		TTL:      64,
-		Protocol: layers.IPProtocolTCP,
-	}
-	tcpLayer := layers.TCP{
-		SrcPort: sport,
-		DstPort: dport,
-		ACK:     false,
-		SYN:     true,
-		Window:  65280,
-		Seq:     10000,
-	}
-	err := tcpLayer.SetNetworkLayerForChecksum(&ipLayer)
-	if err != nil {
-		panic(err)
-	}
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-	err = gopacket.SerializeLayers(buf, opts, &eth, &ipLayer, &tcpLayer)
-	if err != nil {
-		panic(err)
-	}
-	return buf
-}
+

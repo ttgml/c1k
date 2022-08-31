@@ -4,14 +4,12 @@ import (
 	"c1k/client"
 	"c1k/server"
 	"fmt"
+	"github.com/urfave/cli/v2"
 	"log"
 	"os"
-	"sync"
-
-	"github.com/urfave/cli/v2"
 )
 
-var wg sync.WaitGroup
+
 
 func main() {
 	var s_interface string
@@ -24,6 +22,8 @@ func main() {
 	var c_src_port_range string
 	var c_src_hosts string
 	var c_src_exclude_hosts string
+	var c_rate int
+
 	app := &cli.App{
 		Usage: "Create more connection de tool, just test",
 		Commands: []*cli.Command{
@@ -132,20 +132,19 @@ func main() {
 						Usage:       "Exclude some network addresses",
 						Destination: &c_src_exclude_hosts,
 					},
+					&cli.IntFlag{
+						Name:        "rate",
+						Value:       100,
+						DefaultText: "100",
+						Required:    false,
+						Aliases:     []string{"r"},
+						Usage:       "Connect rate (quantity / s)",
+						Destination: &c_rate,
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					fmt.Println("create client: ", c_interface, c_count, c_src_hosts, c_src_port_range, c_host, c_port)
-					wg.Add(1)
-					//抓包
-					go client.HanderPacket(c_interface, c_port, &wg)
-					wg.Wait()
-
-					//发包
-					wg.Add(1)
-					go client.ProcessTask(c_src_hosts, c_interface, c_host, c_src_port_range, c_src_exclude_hosts, c_port, c_count, &wg)
-					// time.Sleep(100 * time.Second)
-
-					wg.Wait()
+					fmt.Println("create client: ", c_interface, c_count, c_src_hosts, c_src_port_range, c_host, c_port, c_rate)
+					client.StartTask(c_interface,c_port,c_src_hosts,c_host,c_src_port_range,c_src_exclude_hosts,c_count, int32(c_rate))
 					return nil
 				},
 			},
