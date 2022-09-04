@@ -68,7 +68,7 @@ sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range>
 ### TODO
 心跳问题
 
-- 客户端需要在一定时间内保持连接不断开，客户端需要有心跳机制(PSH+ACK)
+- ~~客户端需要在一定时间内保持连接不断开，客户端需要有心跳机制(PSH+ACK)~~
 
 统计功能
 
@@ -78,7 +78,7 @@ sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range>
 
 控制速率
 
- - 指定每秒新建连接数
+ - ~~指定每秒新建连接数~~
  - 支持慢启动
 
 控制带宽
