@@ -4,12 +4,11 @@ import (
 	"c1k/client"
 	"c1k/server"
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"log"
 	"os"
+
+	"github.com/urfave/cli/v2"
 )
-
-
 
 func main() {
 	var s_interface string
@@ -23,9 +22,18 @@ func main() {
 	var c_src_hosts string
 	var c_src_exclude_hosts string
 	var c_rate int
+	var c_keepalive bool
+
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"V"},
+		Usage:   "print only the version",
+	}
 
 	app := &cli.App{
-		Usage: "Create more connection de tool, just test",
+		Usage:   "Create more connection de tool, just test",
+		Name:    "c1k",
+		Version: "v0.0.1",
 		Commands: []*cli.Command{
 			{
 				Name:  "server",
@@ -37,7 +45,7 @@ func main() {
 						// DefaultText: "eth0",
 						Required:    true,
 						Aliases:     []string{"i"},
-						Usage:       "set network interface name",
+						Usage:       "Set network interface name",
 						Destination: &s_interface,
 					},
 					&cli.StringFlag{
@@ -46,7 +54,7 @@ func main() {
 						// DefaultText: "0.0.0.0",
 						Required:    true,
 						Aliases:     []string{"x"},
-						Usage:       "set interface ip",
+						Usage:       "Set interface ip",
 						Destination: &s_host,
 					},
 					&cli.StringFlag{
@@ -55,7 +63,7 @@ func main() {
 						DefaultText: "23456",
 						Required:    true,
 						Aliases:     []string{"p"},
-						Usage:       "server port, use [,] split",
+						Usage:       "Server port, use [,] split",
 						Destination: &s_port,
 					},
 				},
@@ -75,7 +83,7 @@ func main() {
 						DefaultText: "23456",
 						Required:    true,
 						Aliases:     []string{"p"},
-						Usage:       "set target port",
+						Usage:       "Set target port",
 						Destination: &c_port,
 					},
 					&cli.StringFlag{
@@ -84,7 +92,7 @@ func main() {
 						DefaultText: "eth0",
 						Required:    true,
 						Aliases:     []string{"i"},
-						Usage:       "set src network interface",
+						Usage:       "Set src network interface",
 						Destination: &c_interface,
 					},
 					&cli.StringFlag{
@@ -93,7 +101,7 @@ func main() {
 						DefaultText: "192.168.56.105",
 						Required:    true,
 						Aliases:     []string{"x"},
-						Usage:       "set target host",
+						Usage:       "Set target host",
 						Destination: &c_host,
 					},
 					&cli.StringFlag{
@@ -102,7 +110,7 @@ func main() {
 						DefaultText: "192.168.56.1",
 						Required:    false,
 						Aliases:     []string{"s"},
-						Usage:       "set src hosts ip or cidr",
+						Usage:       "Set src hosts ip or cidr",
 						Destination: &c_src_hosts,
 					},
 					&cli.StringFlag{
@@ -111,7 +119,7 @@ func main() {
 						DefaultText: "2000-62000",
 						Required:    false,
 						Aliases:     []string{"b"},
-						Usage:       "src port range",
+						Usage:       "Src port range",
 						Destination: &c_src_port_range,
 					},
 					&cli.IntFlag{
@@ -120,7 +128,7 @@ func main() {
 						DefaultText: "1",
 						Required:    false,
 						Aliases:     []string{"c"},
-						Usage:       "connect count number",
+						Usage:       "Connect count number",
 						Destination: &c_count,
 					},
 					&cli.StringFlag{
@@ -141,10 +149,18 @@ func main() {
 						Usage:       "Connect rate (quantity / s)",
 						Destination: &c_rate,
 					},
+					&cli.BoolFlag{
+						Name:        "keepalive",
+						DefaultText: "false",
+						Required:    false,
+						Aliases:     []string{"k"},
+						Usage:       "Enable KeepAlive module",
+						Destination: &c_keepalive,
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
 					fmt.Println("create client: ", c_interface, c_count, c_src_hosts, c_src_port_range, c_host, c_port, c_rate)
-					client.StartTask(c_interface,c_port,c_src_hosts,c_host,c_src_port_range,c_src_exclude_hosts,c_count, int32(c_rate))
+					client.StartTask(c_interface, c_port, c_src_hosts, c_host, c_src_port_range, c_src_exclude_hosts, c_count, int32(c_rate))
 					return nil
 				},
 			},

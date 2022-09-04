@@ -2,26 +2,28 @@ package client
 
 import (
 	"fmt"
+	"net"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"net"
 )
 
 type Pinfo struct {
-	SMac net.HardwareAddr
-	DMac net.HardwareAddr
-	SIp    net.IP
-	DIp    net.IP
+	SMac  net.HardwareAddr
+	DMac  net.HardwareAddr
+	SIp   net.IP
+	DIp   net.IP
 	SPort layers.TCPPort
 	DPort layers.TCPPort
 }
 
-func sendSynP(c_interface string, pi chan Pinfo)  {
+func sendSynP(c_interface string, pi chan Pinfo) {
 	handle, err := pcap.OpenLive(c_interface, 1600, true, pcap.BlockForever)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("what wrong!")
 	for {
 		select {
 		case p := <-pi:
@@ -31,7 +33,7 @@ func sendSynP(c_interface string, pi chan Pinfo)  {
 				fmt.Println("send packet error")
 			}
 		}
-		fmt.Println("send sync done")
+		//fmt.Println("send sync done")
 	}
 }
 

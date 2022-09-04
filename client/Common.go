@@ -73,3 +73,12 @@ func GetSubNetIpList(ips string, exclude string) ([]net.IP, error) {
 	return result[1 : len(result)-1], err
 
 }
+
+func transformIPArray(ipArray []net.IP) [4]byte {
+	s := [4]byte{}
+
+	//for _, ip := range ipArray {
+	//	s = append(s, net.IPv4())
+	//}
+	return s
+}

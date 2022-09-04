@@ -2,12 +2,13 @@ package client
 
 import (
 	"fmt"
-	"github.com/google/gopacket/layers"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/google/gopacket/layers"
 )
 
 var wg sync.WaitGroup
@@ -19,14 +20,25 @@ var C_src_port_range string
 var C_src_exclude_hosts string
 var C_count int
 var C_rate int32
-var C_port int
+var C_port layers.TCPPort
+var C_keepalive bool = true
+var mapPshList = make(map[PshKey]PshValue)
+var mapPshListSync sync.Map
+
+type PshKey struct {
+	Ip   string
+	Port uint16
+}
+type PshValue struct {
+	Seq uint32
+	Ack uint32
+}
 
 func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string, c_src_port_range string, c_src_exclude_hosts string, c_count int, c_rate int32) error {
 	sd_channel := make(chan int, 10000)  //发送SYN(1)后记录一下
 	est_channel := make(chan int, 10000) //发送ACK(3)后记录一下
 	rst_channel := make(chan int, 10000) //接收到rst包需要记录一下
 	re_channel := make(chan int, 10000)  //接受到目标发送过来的包(只要发包就算) //用于确定进度
-
 	C_interface = c_interface
 	C_src_hosts = c_src_hosts
 	C_host = c_host
@@ -34,7 +46,7 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	C_src_exclude_hosts = c_src_exclude_hosts
 	C_count = c_count
 	C_rate = c_rate
-	C_port = c_port
+	C_port = layers.TCPPort(uint16(c_port))
 	// var rst_count int = 0
 
 	//已经发送的包记数（不确定连接是否建立）
@@ -44,9 +56,19 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	var re_count int = 0
 	wg.Add(1)
 	//抓包
+	fmt.Println("go hander packet")
 	go HanderPacket(c_interface, c_port, &wg, est_channel, rst_channel, re_channel)
 	wg.Wait() //等待网卡，需要点时间
 
+	//启动一个goroutine 处理连接保活
+	if C_keepalive {
+		fmt.Println("need keep alive.")
+		wg.Add(1) //如果指定了keepalive，需要一直持续运行
+		go KeepAlive()
+		fmt.Println("keepAlive load...")
+	}
+
+	fmt.Println("hander packet load...")
 	go sum_rst_connect(rst_channel, &rst_count)
 	go sum_send_connect(sd_channel, &sd_count)
 	go sum_est_connect(est_channel, &est_count)
@@ -55,8 +77,9 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	wg.Add(1)
 	//go ProcessTask(c_src_hosts, c_interface, c_host, c_src_port_range, c_src_exclude_hosts, c_port, c_count, &wg, sd_channel)
 	go sendSynP(c_interface, Pi_channel)
-	go RateControl(&wg, Pi_channel, c_rate)
-
+	fmt.Println("sendSyncP load...")
+	go RateControl(&wg)
+	fmt.Println("rateControl load...")
 	//for {
 	//	select {
 	//	case <-re_channel:
@@ -69,7 +92,7 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	//	}
 	//}
 
-	wg.Wait() //等待发包结束
+	wg.Wait() //等待发包结束/持续等待KeepAlive
 	return nil
 }
 
@@ -139,6 +162,6 @@ func ParseSynBaseInfo() (Pinfo, []net.IP, int, int, error) {
 	base_pi.SMac = s_mac
 	base_pi.DMac = d_mac
 	base_pi.DIp = dip
-	base_pi.DPort = layers.TCPPort(uint16(C_port))
+	base_pi.DPort = C_port
 	return base_pi, sips, port_start, port_end, nil
 }

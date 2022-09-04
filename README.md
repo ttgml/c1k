@@ -19,7 +19,7 @@
 
 ```sequence
 Clients->LBS: Connect to
-LBS-> Servers: Connect to
+LBS-> Servers:  Reverse proxy
 Servers -> LBS: Connection establishment;
 LBS->Clients: Connection establishment
 ```
@@ -72,6 +72,7 @@ sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range>
 控制速率
 
  - 指定每秒新建连接数
+ - 支持慢启动
 
 控制带宽
 

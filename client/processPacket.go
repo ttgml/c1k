@@ -86,5 +86,3 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 	wg.Done()
 	return nil
 }
-
-
