@@ -2,8 +2,11 @@ package client
 
 import (
 	"encoding/binary"
+	"errors"
 	"net"
 	"net/netip"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mdlayher/arp"
@@ -81,4 +84,19 @@ func transformIPArray(ipArray []net.IP) [4]byte {
 	//	s = append(s, net.IPv4())
 	//}
 	return s
+}
+
+func checkSrcPortRange(srcRange string) error{
+	port_start := strings.Split(srcRange,"-")[0]
+	port_end := strings.Split(srcRange,"-")[1]
+	ps,err := strconv.Atoi(port_start)
+	pe,err := strconv.Atoi(port_end)
+	if err!=nil{
+		return err
+	}
+	if (ps-pe>1) && pe<65535 && ps > 1{
+		return nil
+	}else {
+		return errors.New("src port range error")
+	}
 }

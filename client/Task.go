@@ -49,6 +49,14 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	C_port = layers.TCPPort(uint16(c_port))
 	// var rst_count int = 0
 
+	//检查参数
+	err := checkSrcPortRange(c_src_port_range)
+	if err != nil{
+		fmt.Println("params error")
+		return err
+	}
+
+
 	//已经发送的包记数（不确定连接是否建立）
 	var sd_count int = 0
 	var rst_count int = 0
