@@ -21,7 +21,7 @@
 ### 使用方法
 
 #### 前期准备
-0. 网络拓扑图
+0. 网络拓扑图，准备三台机器，一台客户机(创建连接)，一台服务机(模拟处理连接)，一台负载均衡(被测试)
 
 ```sequence
 Clients->LBS: Connect to
@@ -30,7 +30,7 @@ Servers -> LBS: Connection establishment;
 LBS->Clients: Connection establishment
 ```
 
-1. 在客户端和服务端机器分别执行下面两个命令，这两条命令设置防火墙策略，丢弃系统发送RST报文。
+1. 在客户机和服务机分别执行下面两个命令，这两条命令设置防火墙策略，丢弃系统发送RST报文。
 ```shell
 sudo iptables-legacy -I OUTPUT -p tcp --tcp-flags ALL RST,ACK -j DROP
 sudo iptables-legacy -I OUTPUT -p tcp --tcp-flags ALL RST -j DROP
