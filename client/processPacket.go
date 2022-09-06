@@ -17,8 +17,8 @@ func ProcessTask(c_src_hosts string, c_interface string, c_host string, sports s
 		//输入的源host包含掩码，是一个网段
 		// src_ip, src_ipnet, err:=net.ParseCIDR(c_src_hosts)
 		// if err != nil{
-		// 	fmt.Println("src ip format error")
-		// 	os.Exit(1)
+		//     fmt.Println("src ip format error")
+		//     os.Exit(1)
 		// }
 		// fmt.Println("src ip and ipnet: ",src_ip, src_ipnet)
 	} else {

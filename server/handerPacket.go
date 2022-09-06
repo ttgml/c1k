@@ -84,7 +84,7 @@ func HanderPacket(deviceName string, host string, port string) {
 				//var buf gopacket.SerializeBuffer = BuildOnlyAckPacket(d_mac, s_mac, d_ip, s_ip, d_port, s_port, ack, seq+1)
 				//err = handle.WritePacketData(buf.Bytes())
 				//if err != nil {
-				//	fmt.Println("send packet error")
+				//    fmt.Println("send packet error")
 				//}
 				// fmt.Println("send done.")
 			}

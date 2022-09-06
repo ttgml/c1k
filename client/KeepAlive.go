@@ -23,13 +23,13 @@ func KeepAlive() {
 	for {
 		time.Sleep(time.Duration(push_interval) * time.Second)
 		//for key, value := range mapPshList {
-		//	buf := BuildPshPacket(key,value,basePi)
-		//	handle.WritePacketData(buf.Bytes())
-		//	fmt.Println("send a push packet: ",key,value,basePi)
-		//	if err != nil {
-		//		fmt.Println("send packet error")
-		//	}
-		//	time.Sleep(time.Duration(sleepInterval)*time.Nanosecond)
+		//    buf := BuildPshPacket(key,value,basePi)
+		//    handle.WritePacketData(buf.Bytes())
+		//    fmt.Println("send a push packet: ",key,value,basePi)
+		//    if err != nil {
+		//        fmt.Println("send packet error")
+		//    }
+		//    time.Sleep(time.Duration(sleepInterval)*time.Nanosecond)
 		//}
 		var op = 0
 		mapPshListSync.Range(func(key, value interface{}) bool {
