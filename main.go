@@ -160,7 +160,7 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 					fmt.Println("create client: ", c_interface, c_count, c_src_hosts, c_src_port_range, c_host, c_port, c_rate)
-					client.StartTask(c_interface, c_port, c_src_hosts, c_host, c_src_port_range, c_src_exclude_hosts, c_count, int32(c_rate))
+					client.StartTask(c_interface, c_port, c_src_hosts, c_host, c_src_port_range, c_src_exclude_hosts, c_count, int32(c_rate), c_keepalive)
 					return nil
 				},
 			},
@@ -171,15 +171,4 @@ func main() {
 		log.Fatal(err)
 	}
 
-}
-
-func Bytes2Bits(data []byte) []int {
-	dst := make([]int, 0)
-	for _, v := range data {
-		for i := 0; i < 8; i++ {
-			move := uint(7 - i)
-			dst = append(dst, int((v>>move)&1))
-		}
-	}
-	return dst
 }

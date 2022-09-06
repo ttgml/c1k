@@ -7,23 +7,33 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/gopacket/layers"
 )
 
 var wg sync.WaitGroup
-var Pi_channel = make(chan Pinfo, 10000) //需要发包的队列
-var C_interface string
-var C_src_hosts string
-var C_host string
-var C_src_port_range string
-var C_src_exclude_hosts string
-var C_count int
-var C_rate int32
-var C_port layers.TCPPort
-var C_keepalive bool = true
-var mapPshList = make(map[PshKey]PshValue)
-var mapPshListSync sync.Map
+var Pi_channel = make(chan Pinfo, 10000) //需要发包的队列，由Control控制这个队列，然后 Sender.go 收到消息后，发包。
+var C_interface string                   //接口名
+var C_src_hosts string                   //源地址
+var C_host string                        //目的地址
+var C_src_port_range string              //源端口
+var C_src_exclude_hosts string           //排除的IP
+var C_count int                          //需要发起请求的总数
+var C_rate int32                         //速率
+var C_port layers.TCPPort                //目的端口
+var C_keepalive bool                     //是否开启心跳
+var mapPshListSync sync.Map              //心跳记录
+
+//已经发送的包记数（不确定连接是否建立）
+// 发送SYN的数量
+var sd_count int = 0
+
+// 记录RST的数量
+var rst_count int = 0
+
+// 记录EST的数量
+var est_count int = 0
 
 type PshKey struct {
 	Ip   string
@@ -34,11 +44,7 @@ type PshValue struct {
 	Ack uint32
 }
 
-func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string, c_src_port_range string, c_src_exclude_hosts string, c_count int, c_rate int32) error {
-	sd_channel := make(chan int, 10000)  //发送SYN(1)后记录一下
-	est_channel := make(chan int, 10000) //发送ACK(3)后记录一下
-	rst_channel := make(chan int, 10000) //接收到rst包需要记录一下
-	re_channel := make(chan int, 10000)  //接受到目标发送过来的包(只要发包就算) //用于确定进度
+func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string, c_src_port_range string, c_src_exclude_hosts string, c_count int, c_rate int32, c_keepalive bool) error {
 	C_interface = c_interface
 	C_src_hosts = c_src_hosts
 	C_host = c_host
@@ -47,7 +53,7 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	C_count = c_count
 	C_rate = c_rate
 	C_port = layers.TCPPort(uint16(c_port))
-	// var rst_count int = 0
+	C_keepalive = c_keepalive
 
 	//检查参数
 	err := checkSrcPortRange(c_src_port_range)
@@ -56,87 +62,25 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 		return err
 	}
 
-	//已经发送的包记数（不确定连接是否建立）
-	var sd_count int = 0
-	var rst_count int = 0
-	var est_count int = 0
-	var re_count int = 0
-	wg.Add(1)
 	//抓包
-	fmt.Println("go hander packet")
-	go HanderPacket(c_interface, c_port, &wg, est_channel, rst_channel, re_channel)
+	wg.Add(1)
+	go HanderPacket(&wg)
 	wg.Wait() //等待网卡，需要点时间
 
 	//启动一个goroutine 处理连接保活
 	if C_keepalive {
-		fmt.Println("need keep alive.")
 		wg.Add(1) //如果指定了keepalive，需要一直持续运行
 		go KeepAlive()
-		fmt.Println("keepAlive load...")
 	}
 
-	fmt.Println("hander packet load...")
-	go sum_rst_connect(rst_channel, &rst_count)
-	go sum_send_connect(sd_channel, &sd_count)
-	go sum_est_connect(est_channel, &est_count)
-	go sum_re_connect(re_channel, &re_count)
-
 	wg.Add(1)
-	//go ProcessTask(c_src_hosts, c_interface, c_host, c_src_port_range, c_src_exclude_hosts, c_port, c_count, &wg, sd_channel)
 	go sendSynP(c_interface, Pi_channel)
-	fmt.Println("sendSyncP load...")
 	go RateControl(&wg)
-	fmt.Println("rateControl load...")
-	//for {
-	//	select {
-	//	case <-re_channel:
-	//		fmt.Println(sd_count, est_count, rst_count, c_count, re_count)
-	//	}
-	//	fmt.Println(est_count + rst_count)
-	//	if sd_count == (est_count + rst_count) {
-	//		fmt.Println(sd_count, est_count, rst_count, re_count)
-	//		break
-	//	}
-	//}
+
+	go PrintTaskProcess()
 
 	wg.Wait() //等待发包结束/持续等待KeepAlive
 	return nil
-}
-
-func sum_rst_connect(rst_channel chan int, rst_count *int) {
-	for {
-		select {
-		case <-rst_channel:
-			*rst_count++
-		}
-	}
-}
-
-func sum_send_connect(sd_channel chan int, sd_count *int) {
-	for {
-		select {
-		case <-sd_channel:
-			*sd_count++
-		}
-	}
-}
-
-func sum_est_connect(est_channel chan int, est_count *int) {
-	for {
-		select {
-		case <-est_channel:
-			*est_count++
-		}
-	}
-}
-
-func sum_re_connect(re_channel chan int, re_count *int) {
-	for {
-		select {
-		case <-re_channel:
-			*re_count++
-		}
-	}
 }
 
 func ParseSynBaseInfo() (Pinfo, []net.IP, int, int, error) {
@@ -171,4 +115,21 @@ func ParseSynBaseInfo() (Pinfo, []net.IP, int, int, error) {
 	base_pi.DIp = dip
 	base_pi.DPort = C_port
 	return base_pi, sips, port_start, port_end, nil
+}
+
+func PrintTaskProcess() {
+	for true {
+		time.Sleep(1 * time.Second)
+		if C_keepalive {
+			len := 0
+			mapPshListSync.Range(func(k, v interface{}) bool {
+				len++
+				return true
+			})
+			fmt.Println(sd_count, est_count, rst_count, len)
+		} else {
+			fmt.Println(sd_count, est_count, rst_count)
+		}
+	}
+
 }

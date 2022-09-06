@@ -77,15 +77,6 @@ func GetSubNetIpList(ips string, exclude string) ([]net.IP, error) {
 
 }
 
-func transformIPArray(ipArray []net.IP) [4]byte {
-	s := [4]byte{}
-
-	//for _, ip := range ipArray {
-	//    s = append(s, net.IPv4())
-	//}
-	return s
-}
-
 func checkSrcPortRange(srcRange string) error {
 	port_start := strings.Split(srcRange, "-")[0]
 	port_end := strings.Split(srcRange, "-")[1]

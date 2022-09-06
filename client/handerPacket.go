@@ -13,18 +13,17 @@ import (
 )
 
 //这个方法主要用来抓取服务端返回的数据包，并且返回第三次握手包
-func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel chan int, rst_channel chan int, re_channel chan int) {
-	handle, err := pcap.OpenLive(deviceName, 1600, true, pcap.BlockForever)
+func HanderPacket(wg *sync.WaitGroup) {
+	handle, err := pcap.OpenLive(C_interface, 1600, true, pcap.BlockForever)
 
 	if err != nil {
 		panic(err)
 	}
 
-	handle.SetBPFFilter("src port " + string(port))
+	handle.SetBPFFilter("src port " + C_port.String())
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	//等准备好抓包之后，通知默认goroutine继续执行后面的代码
 	wg.Done()
-	fmt.Println("go hander packet wg.Done()")
 	for {
 		packet, err := packetSource.NextPacket()
 		if err == io.EOF {
@@ -47,7 +46,6 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel c
 			var seq = binary.BigEndian.Uint32(tcp.Contents[4:8])
 			var ack = binary.BigEndian.Uint32(tcp.Contents[8:12])
 			var payload_len uint32 = uint32(len(tcp.Payload))
-			re_channel <- 1
 
 			if tcp.SYN && tcp.ACK {
 				// fmt.Println("SYN+ACK 第二次挥手", dip,sip)
@@ -56,6 +54,7 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel c
 				if err != nil {
 					fmt.Println("send packet error")
 				}
+				est_count++
 				if C_keepalive {
 					//这里判断如果服务端回了SYN的确认包，要记录目标（也就是客户端的IP和端口），在后面发送psh的时候要用到
 					//还有seq和ack ，后期可能会增加 len 的长度
@@ -67,15 +66,12 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel c
 						Ack: seq + payload_len,
 						Seq: ack,
 					}
-					//mapPshList[pk]=pv
 					mapPshListSync.Store(pk, pv)
 				}
-				est_channel <- 1
 			}
 			if tcp.ACK && !tcp.SYN && !tcp.FIN && !tcp.RST && !tcp.PSH {
 				//PSH包之后，服务端会返回一个ACK，这里余姚记录这个这个返回的Ack和Seq，下一次PSH会用到。
 				//这里不需要回包
-				fmt.Println("收到一个ACK")
 				//TODO 这里可能需要判断一下是否是服务端发送过来的ACK，之要处理客户端发送过来的ACK
 				if C_port != s_port {
 					break
@@ -89,7 +85,6 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel c
 						Ack: seq + payload_len,
 						Seq: ack,
 					}
-					//mapPshList[pk]=pv
 					mapPshListSync.Store(pk, pv)
 				}
 			}
@@ -100,11 +95,10 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel c
 						Ip:   s_ip.String(),
 						Port: uint16(s_port),
 					}
-					//delete(mapPshList, pk)
 					mapPshListSync.Delete(pk)
 				}
 
-				rst_channel <- 1
+				rst_count++
 			}
 			if tcp.RST && tcp.ACK {
 				if C_keepalive {
@@ -112,11 +106,10 @@ func HanderPacket(deviceName string, port int, wg *sync.WaitGroup, est_channel c
 						Ip:   s_ip.String(),
 						Port: uint16(s_port),
 					}
-					delete(mapPshList, pk)
 					mapPshListSync.Delete(pk)
 				}
-				//这属于 服务器拒绝了 连接（因为服务端没有监听对应的端口，所以返回了RST+ACK
-				rst_channel <- 1
+				//这属于 服务器拒绝了 连接（因为服务端没有监听对应的端口，所以返回了RST+ACK）
+				rst_count++
 			}
 		}
 	}

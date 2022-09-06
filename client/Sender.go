@@ -23,7 +23,6 @@ func sendSynP(c_interface string, pi chan Pinfo) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("what wrong!")
 	for {
 		select {
 		case p := <-pi:
@@ -32,6 +31,7 @@ func sendSynP(c_interface string, pi chan Pinfo) {
 			if err != nil {
 				fmt.Println("send packet error")
 			}
+			sd_count++
 		}
 		//fmt.Println("send sync done")
 	}
