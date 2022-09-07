@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 
 	"github.com/google/gopacket"
@@ -19,8 +20,8 @@ func HanderPacket(wg *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
+	handle.SetBPFFilter("src port " + strconv.Itoa(int(C_port)) + "and src host " + C_host)
 
-	handle.SetBPFFilter("src port " + C_port.String())
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	//等准备好抓包之后，通知默认goroutine继续执行后面的代码
 	wg.Done()
@@ -31,7 +32,6 @@ func HanderPacket(wg *sync.WaitGroup) {
 		} else if err != nil {
 			continue
 		}
-
 		if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 			tcp, _ := tcpLayer.(*layers.TCP)
 			//fmt.Println("SYN: ",tcp.SYN,tcp.ACK,tcp.PSH,tcp.FIN)
@@ -70,7 +70,7 @@ func HanderPacket(wg *sync.WaitGroup) {
 				}
 			}
 			if tcp.ACK && !tcp.SYN && !tcp.FIN && !tcp.RST && !tcp.PSH {
-				//PSH包之后，服务端会返回一个ACK，这里余姚记录这个这个返回的Ack和Seq，下一次PSH会用到。
+				//PSH包之后，服务端会返回一个ACK，这里要记录这个这个返回的Ack和Seq，下一次PSH会用到。
 				//这里不需要回包
 				//TODO 这里可能需要判断一下是否是服务端发送过来的ACK，之要处理客户端发送过来的ACK
 				if C_port != s_port {

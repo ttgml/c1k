@@ -85,7 +85,7 @@ func checkSrcPortRange(srcRange string) error {
 	if err != nil {
 		return err
 	}
-	if (ps-pe > 1) && pe < 65535 && ps > 1 {
+	if (pe-ps > 1) && pe < 65535 && ps > 1 {
 		return nil
 	} else {
 		return errors.New("src port range error")

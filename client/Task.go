@@ -24,6 +24,7 @@ var C_rate int32                         //速率
 var C_port layers.TCPPort                //目的端口
 var C_keepalive bool                     //是否开启心跳
 var mapPshListSync sync.Map              //心跳记录
+var C_keep_count int64 = 0
 
 //已经发送的包记数（不确定连接是否建立）
 // 发送SYN的数量
@@ -58,6 +59,7 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	//检查参数
 	err := checkSrcPortRange(c_src_port_range)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("params error")
 		return err
 	}
@@ -124,9 +126,11 @@ func PrintTaskProcess() {
 			len := 0
 			mapPshListSync.Range(func(k, v interface{}) bool {
 				len++
+				fmt.Println(k, v)
 				return true
 			})
-			fmt.Println(sd_count, est_count, rst_count, len)
+
+			fmt.Println(sd_count, est_count, rst_count, len, C_keep_count)
 		} else {
 			fmt.Println(sd_count, est_count, rst_count)
 		}
