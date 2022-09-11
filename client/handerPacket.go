@@ -20,7 +20,7 @@ func HanderPacket(wg *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	handle.SetBPFFilter("src port " + strconv.Itoa(int(C_port)) + "and src host " + C_host)
+	handle.SetBPFFilter("tcp src port " + strconv.Itoa(int(C_port)) + "and src host " + C_host)
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	//等准备好抓包之后，通知默认goroutine继续执行后面的代码
@@ -47,8 +47,11 @@ func HanderPacket(wg *sync.WaitGroup) {
 			var ack = binary.BigEndian.Uint32(tcp.Contents[8:12])
 			var payload_len uint32 = uint32(len(tcp.Payload))
 
+			// TODO 这里总是会收到一些不相关的包，需要做一下过滤
+			// 统计的时候会出现问题
 			if tcp.SYN && tcp.ACK {
 				// fmt.Println("SYN+ACK 第二次挥手", dip,sip)
+				fmt.Println(s_ip,d_ip)
 				buf := BuildSynAckAckPacket(d_mac, s_mac, d_ip, s_ip, s_port, d_port, ack, seq+1)
 				err = handle.WritePacketData(buf.Bytes())
 				if err != nil {

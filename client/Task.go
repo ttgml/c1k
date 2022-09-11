@@ -68,17 +68,20 @@ func StartTask(c_interface string, c_port int, c_src_hosts string, c_host string
 	wg.Add(1)
 	go HanderPacket(&wg)
 	wg.Wait() //等待网卡，需要点时间
-
+	fmt.Println("网卡准备就绪")
 	//启动一个goroutine 处理连接保活
 	if C_keepalive {
+		fmt.Println("KeepAlive 准备就绪")
 		wg.Add(1) //如果指定了keepalive，需要一直持续运行
 		go KeepAlive()
 	}
 
 	wg.Add(1)
 	go sendSynP(c_interface, Pi_channel)
+	fmt.Println("Sender准备就绪")
 	go RateControl(&wg)
-
+	fmt.Println("RateControl准备就绪")
+	fmt.Println("开始打印TaskProcess")
 	go PrintTaskProcess()
 
 	wg.Wait() //等待发包结束/持续等待KeepAlive
@@ -126,7 +129,7 @@ func PrintTaskProcess() {
 			len := 0
 			mapPshListSync.Range(func(k, v interface{}) bool {
 				len++
-				fmt.Println(k, v)
+				//fmt.Println(k, v)
 				return true
 			})
 

@@ -26,6 +26,7 @@ func RateControl(wg *sync.WaitGroup) {
 		}
 		for i := port_start; i < port_end; i++ {
 			if reqCount == C_count {
+				fmt.Println("reqCount == C_count.")
 				next = false
 			}
 			if !next {
