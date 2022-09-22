@@ -15,8 +15,6 @@
 
 构建正常的TCP握手包，直接通过网卡发送。同时抓取网卡数据包，检测到TCP握手相关的数据包时，根据TCP协议返回对应的数据包，以完成握手。
 
-整个完整过程，程序都不会去维护连接(只有在开启KeepAlive时会记录源IP/端口/seq/ack)，都是根据收到的报文返回与之对应的握手或者ACK报文，所以程序运行时资源占用不多，理论上可以支持创建很多很多长连接。
-
 
 ### 使用方法
 
@@ -44,7 +42,7 @@ sudo ip route add default via <client_ip>
 sudo ./c1k server -i <interface> -x <ip> -p <port>
 ```
 
-4. 在客户端机器上启动client
+4. 根据说明指定程序运行参数，在客户端机器上启动client
 ```client
 sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range> -c <count>
 ```
@@ -65,6 +63,8 @@ sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range>
  - ` --exclude / -e ` 排除某些源地址，格式如src
  - ` --keepalive / -k ` 开启KeepAlive功能，定时发送心跳包，默认不指定(不开启)。
 
+### 性能测试
+
 ### TODO
 心跳问题
 
@@ -82,3 +82,5 @@ sudo ./c1k client -i <interface> -x <ip> -p <port> -s <cidr> -b <src_port_range>
  - 支持慢启动
 
 控制带宽
+
+可能会以某种方式支持MQTT协议

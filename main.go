@@ -2,6 +2,7 @@ package main
 
 import (
 	"c1k/client"
+	"c1k/core"
 	"c1k/server"
 	"fmt"
 	"log"
@@ -40,18 +41,14 @@ func main() {
 				Usage: "Just listen host and port",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "interface",
-						// Value:       "eth0",
-						// DefaultText: "eth0",
+						Name:        "interface",
 						Required:    true,
 						Aliases:     []string{"i"},
 						Usage:       "Set network interface name",
 						Destination: &s_interface,
 					},
 					&cli.StringFlag{
-						Name: "host",
-						// Value:       "0.0.0.0",
-						// DefaultText: "0.0.0.0",
+						Name:        "host",
 						Required:    true,
 						Aliases:     []string{"x"},
 						Usage:       "Set interface ip",
@@ -161,6 +158,15 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					fmt.Println("create client: ", c_interface, c_count, c_src_hosts, c_src_port_range, c_host, c_port, c_rate)
 					client.StartTask(c_interface, c_port, c_src_hosts, c_host, c_src_port_range, c_src_exclude_hosts, c_count, int32(c_rate), c_keepalive)
+					return nil
+				},
+			},
+			{
+				Name:  "test",
+				Usage: "just for test",
+				Action: func(context *cli.Context) error {
+					fmt.Println("only for test")
+					core.HandShakeSrv("enp3s0", "")
 					return nil
 				},
 			},
